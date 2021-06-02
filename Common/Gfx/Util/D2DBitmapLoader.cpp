@@ -49,27 +49,37 @@ HRESULT D2DBitmapLoader::LoadBitmapFromFile(const Canvas& canvas, D2DBitmap* bit
 	}
 	bitmap->SetFileTime(fileTime);
 
-	Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
-	Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> decoderFrame;
+	// Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
+	// Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> decoderFrame;
 	Microsoft::WRL::ComPtr<IWICBitmapSource> source;
 
-	HRESULT hr = Canvas::c_WICFactory->CreateDecoderFromFileHandle(
-		(ULONG_PTR)fileHandle,
-		nullptr,
-		WICDecodeMetadataCacheOnDemand,
-		decoder.GetAddressOf());
-	if (SUCCEEDED(hr))
-	{
-		hr = decoder->GetFrame(0U, decoderFrame.GetAddressOf());
-		if (SUCCEEDED(hr))
-		{
-			hr = ConvertToD2DFormat(decoderFrame.Get(), source);
-		}
-	}
-	if (FAILED(hr)) return cleanup(hr);
+	// HRESULT hr = Canvas::c_WICFactory->CreateDecoderFromFileHandle(
+	// 	(ULONG_PTR)fileHandle,
+	// 	nullptr,
+	// 	WICDecodeMetadataCacheOnDemand,
+	// 	decoder.GetAddressOf());
+	// if (SUCCEEDED(hr))
+	// {
+	// 	hr = decoder->GetFrame(0U, decoderFrame.GetAddressOf());
+	// 	if (SUCCEEDED(hr))
+	// 	{
+	// 		hr = ConvertToD2DFormat(decoderFrame.Get(), source);
+	// 	}
+	// }
+	// if (FAILED(hr)) return cleanup(hr);
+	//
+	// const int orientation = GetExifOrientation(decoderFrame.Get());
+	// bitmap->SetOrientation(orientation);
 
-	const int orientation = GetExifOrientation(decoderFrame.Get());
-	bitmap->SetOrientation(orientation);
+	// PluginImageData im should be passed as an arg to this function
+	PluginImageData im{};
+	IWICBitmap* iwicBitmap;
+	HRESULT hr = Gfx::Canvas::c_WICFactory->CreateBitmapFromMemory(
+		im.width, im.height,
+		PLUGIN_PIXEL_FORMAT,
+		STRIDE /* I don't know, what should be here, google it */, im.width * im.height, im.pixels, &iwicBitmap);
+
+	source = iwicBitmap;
 
 	UINT width = 0U;
 	UINT height = 0U;

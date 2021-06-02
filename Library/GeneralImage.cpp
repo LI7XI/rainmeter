@@ -8,7 +8,10 @@
 #include "StdAfx.h"
 #include "GeneralImage.h"
 #include "Logger.h"
+#include "Measure.h"
+#include "MeasurePlugin.h"
 #include "../Common/PathUtil.h"
+#include "../Common/Gfx/Util/D2DBitmapLoader.h"
 
 // GrayScale Matrix
 const D2D1_MATRIX_5X4_F GeneralImage::c_GreyScaleMatrix = {
@@ -225,7 +228,7 @@ void GeneralImage::ReadOptions(ConfigParser& parser, const WCHAR* section, const
 	m_Options.m_UseExifOrientation = parser.ReadBool(section, m_OptionArray[OptionIndexUseExifOrientation], false);
 }
 
-bool GeneralImage::LoadImage(const std::wstring& imageName)
+bool GeneralImage::LoadImageFromFile(const std::wstring& imageName)
 {
 	if (!m_Skin || imageName.empty())
 	{
@@ -266,6 +269,76 @@ bool GeneralImage::LoadImage(const std::wstring& imageName)
 		auto bitmap = new Gfx::D2DBitmap(filename);
 
 		HRESULT hr = bitmap->Load(m_Skin->GetCanvas());
+		if (SUCCEEDED(hr))
+		{
+			GetImageCache().Put(info, bitmap);
+			handle = GetImageCache().Get(info);
+			if (!handle) return false;
+		}
+		else
+		{
+			delete bitmap;
+			bitmap = nullptr;
+		}
+	}
+
+	DisposeImage();
+
+	if (handle)
+	{
+		m_Bitmap = handle;
+
+		m_Options.m_Path = info.m_Path;
+		m_Options.m_FileSize = info.m_FileSize;
+		m_Options.m_FileTime = info.m_FileTime;
+
+		ApplyTransforms();
+		return true;
+	}
+
+	return false;
+}
+
+bool GeneralImage::LoadImageFromMeasure(Measure* m)
+{
+	if (!m_Skin || m == nullptr)
+	{
+		DisposeImage();
+		return false;
+	}
+
+	auto pm = dynamic_cast<MeasurePlugin*>(m);
+	if (pm == nullptr)
+	{
+		DisposeImage();
+		return false;
+	}
+
+	ImageOptions info;
+	info.m_Path = std::wstring{ L"measure://" } + m->GetSkin()->GetFilePath() + L"/" + m->GetName();
+	info.m_FileSize = 0;
+
+	// PluginImageData is a type to be created, must contain at least:
+	// 1. uint32_t pixels array
+	// 2. Width and height
+	// 3. uint64_t timestamp
+	PluginImageData im{};
+	bool success = pm.GetImage(&im);
+	if (!success)
+	{
+		DisposeImage();
+		return false;
+	}
+	
+	info.m_FileTime = im.timestamp;
+	
+	ImageCacheHandle* handle = GetImageCache().Get(info);
+	if (!handle)
+	{
+		auto bitmap = new Gfx::D2DBitmap();
+		// function LoadBitmapFromPluginData should be created, hints on how to do this are in the LoadBitmapFromFile
+		HRESULT hr = Gfx::Util::D2DBitmapLoader::LoadBitmapFromPluginData(im, m_Skin->GetCanvas(), bitmap);
+		
 		if (SUCCEEDED(hr))
 		{
 			GetImageCache().Put(info, bitmap);

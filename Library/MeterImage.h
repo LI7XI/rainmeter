@@ -29,7 +29,7 @@ public:
 protected:
 	virtual void ReadOptions(ConfigParser& parser, const WCHAR* section);
 	virtual void BindMeasures(ConfigParser& parser, const WCHAR* section);
-	
+
 	virtual bool IsFixedSize(bool overwrite = false) { return overwrite ? true : m_ImageName.empty(); }
 
 private:
@@ -41,7 +41,9 @@ private:
 		DRAWMODE_KEEPRATIOANDCROP
 	};
 
-	void LoadImage(const std::wstring& imageName, bool bLoadAlways);
+	void LoadImageFromFile(const std::wstring& imageName, bool bLoadAlways);
+	bool LoadImageFromMeasure(Measure* m);
+	void CalcImageDimensions();
 
 	GeneralImage m_Image;
 	std::wstring m_ImageName;
