@@ -42,6 +42,7 @@ MeasurePlugin::~MeasurePlugin()
 		}
 
 		FreeLibrary(m_Plugin);
+		m_Plugin = nullptr;
 	}
 }
 
