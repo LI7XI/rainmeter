@@ -222,16 +222,16 @@ const WCHAR* MeasurePlugin::GetStringValue()
 
 /*
 ** Gets the image data from plugin (if available).
-**
+** Returns true if plugin provided the image, false otherwise.
 */
-const WCHAR* MeasurePlugin::GetImageData(UINT8** imagePixels, INT32& imageWidth, INT32& imageHeight, INT64& imageTimestamp, void* reserved)
+bool MeasurePlugin::GetImageData(UINT32*& imagePixels, INT32& imageWidth, INT32& imageHeight, INT64& imageTimestamp)
 {
-	if (m_GetImageFunc)
+	if (m_AllowImageTransfer && m_GetImageFunc)
 	{
-		bool ret = ((GETIMAGE)m_GetImageFunc)(m_PluginData, imagePixels, imageWidth, imageHeight, imageTimestamp, reserved);
-		if (ret) return L"";
+		const auto res = ((GETIMAGE)m_GetImageFunc)(m_PluginData, &imagePixels, &imageWidth, &imageHeight, &imageTimestamp);
+		return res != nullptr;
 	}
-	return nullptr;
+	return false;
 }
 
 /*
@@ -291,6 +291,10 @@ bool MeasurePlugin::CommandWithReturn(const std::wstring& command, std::wstring&
 			function == "GetPluginAuthor" ||		// Old API
 			function == "GetPluginVersion")			// Old API
 			return false;
+		if (m_AllowImageTransfer && function == "GetImage")
+		{
+			return false;
+		}
 
 		// Parse arguments
 		auto _args = ConfigParser::Tokenize2(
@@ -326,4 +330,32 @@ bool MeasurePlugin::CommandWithReturn(const std::wstring& command, std::wstring&
 	}
 
 	return false;
+}
+
+const WCHAR* MeasurePlugin::setConfig(const WCHAR* name, const WCHAR* value)
+{
+	if (_wcsicmp(name, L"image-transfer") == 0)
+	{
+		if (_wcsicmp(value, L"true") == 0)
+		{
+			m_AllowImageTransfer = true;
+			return L"ok";
+		}
+		if (_wcsicmp(value, L"false") == 0)
+		{
+			m_AllowImageTransfer = false;
+			return L"ok";
+		}
+		return L"invalid value";
+	}
+	return L"unknown name";
+}
+
+const WCHAR* MeasurePlugin::getConfig(const WCHAR* name) const
+{
+	if (_wcsicmp(name, L"image-transfer") == 0)
+	{
+		return m_AllowImageTransfer ? L"true" : L"false";
+	}
+	return nullptr;
 }
