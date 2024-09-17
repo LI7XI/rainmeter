@@ -9,6 +9,7 @@
 #include "GeneralImage.h"
 #include "Logger.h"
 #include "../Common/PathUtil.h"
+#include "../Common/Gfx/Util/D2DBitmapLoader.h"
 
 // GrayScale Matrix
 const D2D1_MATRIX_5X4_F GeneralImage::c_GreyScaleMatrix = {
@@ -225,7 +226,7 @@ void GeneralImage::ReadOptions(ConfigParser& parser, const WCHAR* section, const
 	m_Options.m_UseExifOrientation = parser.ReadBool(section, m_OptionArray[OptionIndexUseExifOrientation], false);
 }
 
-bool GeneralImage::LoadImage(const std::wstring& imageName)
+bool GeneralImage::LoadImageFromFile(const std::wstring& imageName)
 {
 	if (!m_Skin || imageName.empty())
 	{
@@ -266,6 +267,69 @@ bool GeneralImage::LoadImage(const std::wstring& imageName)
 		auto bitmap = new Gfx::D2DBitmap(filename);
 
 		HRESULT hr = bitmap->Load(m_Skin->GetCanvas());
+		if (SUCCEEDED(hr))
+		{
+			GetImageCache().Put(info, bitmap);
+			handle = GetImageCache().Get(info);
+			if (!handle) return false;
+		}
+		else
+		{
+			delete bitmap;
+			bitmap = nullptr;
+		}
+	}
+
+	DisposeImage();
+
+	if (handle)
+	{
+		m_Bitmap = handle;
+
+		m_Options.m_Path = info.m_Path;
+		m_Options.m_FileSize = info.m_FileSize;
+		m_Options.m_FileTime = info.m_FileTime;
+
+		ApplyTransforms();
+		return true;
+	}
+
+	return false;
+}
+
+bool GeneralImage::LoadImageFromPluginMeasure(MeasurePlugin* mPlugin)
+{
+	if (!m_Skin || mPlugin == nullptr)
+	{
+		DisposeImage();
+		return false;
+	}
+
+	ImageOptions info;
+	info.m_Path = std::wstring{ L"measure://" } + mPlugin->GetSkin()->GetFilePath() + L"/" + mPlugin->GetName();
+	info.m_FileSize = 0;
+
+	INT32 imageWidth = 0;
+	INT32 imageHeight = 0;
+	INT64 imageTimestamp = 0;
+	UINT8* imagePixels = nullptr;
+
+	auto success = mPlugin->GetImageData(&imagePixels, imageWidth, imageHeight, imageTimestamp, nullptr);
+	if (!success)
+	{
+		DisposeImage();
+		return false;
+	}
+
+	info.m_FileTime = imageTimestamp;
+
+	ImageCacheHandle* handle = GetImageCache().Get(info);
+	if (!handle)
+	{
+		auto bitmap = new Gfx::D2DBitmap();
+		HRESULT hr = Gfx::Util::D2DBitmapLoader::LoadBitmapFromMemory(m_Skin->GetCanvas(), bitmap,
+			imagePixels, imageWidth, imageHeight, imageTimestamp);
+
 		if (SUCCEEDED(hr))
 		{
 			GetImageCache().Put(info, bitmap);

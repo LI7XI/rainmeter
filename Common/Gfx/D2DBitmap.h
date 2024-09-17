@@ -56,6 +56,7 @@ class D2DBitmap
 {
 public:
 	D2DBitmap(const std::wstring& path, int exifOrientation = 0);
+	D2DBitmap();
 	~D2DBitmap();
 
 	UINT GetWidth() const{ return m_Width; }
@@ -92,7 +93,6 @@ private:
 	friend class Util::D2DEffectStream;
 	friend class Gfx::RenderTexture;
 
-	D2DBitmap();
 	D2DBitmap(const D2DBitmap& other) = delete;
 	D2DBitmap& operator=(D2DBitmap other) = delete;
 

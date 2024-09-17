@@ -71,6 +71,46 @@ HRESULT D2DBitmapLoader::LoadBitmapFromFile(const Canvas& canvas, D2DBitmap* bit
 	const int orientation = GetExifOrientation(decoderFrame.Get());
 	bitmap->SetOrientation(orientation);
 
+	return CreateBitmap(canvas, bitmap, hr, source, fileHandle);
+}
+
+HRESULT D2DBitmapLoader::LoadBitmapFromMemory(const Canvas& canvas, D2DBitmap* bitmap,
+	UINT8* imagePixels, INT32 imageWidth, INT32 imageHeight, INT64 imageTimestamp)
+{
+	if (!bitmap) return E_FAIL;
+
+	auto cleanup = [&](HRESULT hr) { return hr; };
+
+	Microsoft::WRL::ComPtr<IWICBitmapSource> source;
+	IWICBitmap* iwicBitmap;
+
+	HRESULT hr = Gfx::Canvas::c_WICFactory->CreateBitmapFromMemory(
+		(UINT)imageWidth, (UINT)imageHeight,
+		GUID_WICPixelFormat32bppBGRA, (UINT)imageWidth * 4 ,
+		((UINT)imageWidth * (UINT)imageHeight * 4) * sizeof(unsigned char),
+		reinterpret_cast<BYTE*>(imagePixels), &iwicBitmap);
+
+	if (SUCCEEDED(hr))
+	{
+		hr = ConvertToD2DFormat(iwicBitmap, source);
+		iwicBitmap->Release();
+	}
+	if (FAILED(hr)) {
+		iwicBitmap->Release();
+		return cleanup(hr);
+	}
+
+	return CreateBitmap(canvas, bitmap, hr, source);
+}
+
+HRESULT D2DBitmapLoader::CreateBitmap(const Canvas& canvas, D2DBitmap* bitmap, HRESULT& hr,
+	Microsoft::WRL::ComPtr<IWICBitmapSource> source, HANDLE fileHandle)
+{
+	auto cleanup = [&](HRESULT hr) {
+		if (fileHandle) CloseHandle(fileHandle);
+		return hr;
+	};
+
 	UINT width = 0U;
 	UINT height = 0U;
 	hr = source->GetSize(&width, &height);

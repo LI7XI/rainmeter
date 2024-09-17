@@ -17,6 +17,9 @@ class D2DBitmapLoader
 {
 public:
 	static HRESULT LoadBitmapFromFile(const Canvas& canvas, D2DBitmap* bitmap);
+	static HRESULT LoadBitmapFromMemory(const Canvas& canvas, D2DBitmap* bitmap,
+		UINT8* imagePixels, INT32 imageWidth, INT32 imageHeight, INT64 imageTimestamp);
+
 	static bool HasFileChanged(D2DBitmap* bitmap, const std::wstring& file);
 	static HRESULT GetFileInfo(const std::wstring& path, FileInfo* fileInfo);
 
@@ -28,6 +31,8 @@ private:
 	D2DBitmapLoader(const D2DBitmapLoader& other) = delete;
 	D2DBitmapLoader& operator=(D2DBitmapLoader other) = delete;
 
+	static HRESULT CreateBitmap(const Canvas& canvas, D2DBitmap* bitmap, HRESULT& hr,
+	Microsoft::WRL::ComPtr<IWICBitmapSource> source, HANDLE fileHandle = nullptr);
 	static HRESULT CropWICBitmapSource(WICRect& clipRect,
 		IWICBitmapSource* source, Microsoft::WRL::ComPtr<IWICBitmapSource>& dest);
 	static HRESULT ConvertToD2DFormat(IWICBitmapSource* source, Microsoft::WRL::ComPtr<IWICBitmapSource>& dest);

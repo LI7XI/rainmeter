@@ -7,7 +7,6 @@
 
 #include "StdAfx.h"
 #include "MeterImage.h"
-#include "Measure.h"
 #include "Rainmeter.h"
 #include "../Common/PathUtil.h"
 #include "../Common/Gfx/Canvas.h"
@@ -38,7 +37,7 @@ void MeterImage::Initialize()
 	if (m_Measures.empty() && !m_DynamicVariables && !m_ImageName.empty())
 	{
 		m_ImageNameResult = m_ImageName;
-		LoadImage(m_ImageName, true);
+		LoadImageFromFile(m_ImageName, true);
 	}
 	else if (m_Image.IsLoaded())
 	{
@@ -55,14 +54,27 @@ void MeterImage::Initialize()
 ** Loads the image from disk
 **
 */
-void MeterImage::LoadImage(const std::wstring& imageName, bool bLoadAlways)
+void MeterImage::LoadImageFromFile(const std::wstring& imageName, bool bLoadAlways)
 {
-	m_Image.LoadImage(imageName);
+	m_Image.LoadImageFromFile(imageName);
+	CalcImageDimensions();
+}
 
+bool MeterImage::LoadImageFromPluginMeasure(MeasurePlugin *mPlugin)
+{
+	return m_Image.LoadImageFromPluginMeasure(mPlugin);
+}
+
+/*
+** Calculate image dimensions.
+**
+*/
+void MeterImage::CalcImageDimensions()
+{
 	if (m_Image.IsLoaded())
 	{
 		bool useMaskSize = false;
-		m_MaskImage.LoadImage(m_MaskImageName);
+		m_MaskImage.LoadImageFromFile(m_MaskImageName);
 		if (m_MaskImage.IsLoaded()) useMaskSize = true;
 
 		// Calculate size of the meter
@@ -170,6 +182,15 @@ bool MeterImage::Update()
 			{
 				if (m_ImageName.empty())
 				{
+					auto plugin_measure = dynamic_cast<MeasurePlugin *>(m_Measures[0]);
+					if (plugin_measure != nullptr)
+					{
+						if (LoadImageFromPluginMeasure(plugin_measure))
+						{
+							CalcImageDimensions();
+							return true;
+						}
+					}
 					m_ImageNameResult = m_Measures[0]->GetStringOrFormattedValue(AUTOSCALE_OFF, 1.0, 0, false);
 				}
 				else
@@ -187,7 +208,7 @@ bool MeterImage::Update()
 				m_ImageNameResult = m_ImageName;
 			}
 
-			LoadImage(m_ImageNameResult, (wcscmp(oldResult.c_str(), m_ImageNameResult.c_str()) != 0));
+			LoadImageFromFile(m_ImageNameResult, (wcscmp(oldResult.c_str(), m_ImageNameResult.c_str()) != 0));
 
 			return true;
 		}

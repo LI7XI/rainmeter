@@ -14,6 +14,7 @@
 #include "Skin.h"
 #include "ImageCache.h"
 #include "ImageOptions.h"
+#include "MeasurePlugin.h"
 
 /*
 ** Helper macro to define an array of option names. A prefix must be given.
@@ -68,7 +69,8 @@ public:
 	Gfx::D2DBitmap* GetImage() { return m_BitmapProcessed ? m_BitmapProcessed->GetBitmap() : nullptr; }
 
 	void ReadOptions(ConfigParser& parser, const WCHAR* section, const WCHAR* imagePath = L"");
-	bool LoadImage(const std::wstring& imageName);
+	bool LoadImageFromFile(const std::wstring& imageName);
+	bool LoadImageFromPluginMeasure(MeasurePlugin* mPlugin);
 
 private:
 

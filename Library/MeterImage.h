@@ -41,7 +41,9 @@ private:
 		DRAWMODE_KEEPRATIOANDCROP
 	};
 
-	void LoadImage(const std::wstring& imageName, bool bLoadAlways);
+	void LoadImageFromFile(const std::wstring& imageName, bool bLoadAlways);
+	bool LoadImageFromPluginMeasure(MeasurePlugin* mPlugin);
+	void CalcImageDimensions();
 
 	GeneralImage m_Image;
 	std::wstring m_ImageName;
